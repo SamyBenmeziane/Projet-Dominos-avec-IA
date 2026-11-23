@@ -1,120 +1,139 @@
-class Partie :
-    #S0 : état initial
-    def __init__(self,main_joueur1 , main_joueur2  ):
-        self.__MAX = Joueur("MAX",main_joueur1)
-        self.__MIN = Joueur("MIN",main_joueur2)
-        self.__plateau = Plateau()
-        
-        self.__joueur_courant = self.__MAX
-    #TerminalTest
-    def est_terminee(self):
+"""Moteur de jeu : Partie."""
+from typing import Optional
 
-        if self.__MAX.a_gagne():
+from .domino import Domino, VALEUR_MAX
+from .joueur import Joueur
+from .plateau import Plateau, Coup
+
+
+class Partie:
+    """Etat du jeu = (plateau, mains des joueurs, joueur courant)."""
+
+    def __init__(self, joueur1: Joueur, joueur2: Joueur):
+        self._j1 = joueur1
+        self._j2 = joueur2
+        self._plateau = Plateau()
+        self._courant = self._determiner_premier()
+        self._historique: list[tuple[str, Optional[Coup]]] = []
+
+    def _determiner_premier(self) -> Joueur:
+        for valeur in range(VALEUR_MAX, -1, -1):
+            d = Domino(valeur, valeur)
+            if d in self._j1.main:
+                return self._j1
+            if d in self._j2.main:
+                return self._j2
+        return self._j1
+
+    @property
+    def plateau(self) -> Plateau:
+        return self._plateau
+
+    @property
+    def joueur1(self) -> Joueur:
+        return self._j1
+
+    @property
+    def joueur2(self) -> Joueur:
+        return self._j2
+
+    @property
+    def joueur_courant(self) -> Joueur:
+        return self._courant
+
+    @property
+    def adversaire(self) -> Joueur:
+        return self._j2 if self._courant is self._j1 else self._j1
+
+    @property
+    def historique(self) -> list[tuple[str, Optional[Coup]]]:
+        return list(self._historique)
+
+    def changer_joueur(self) -> None:
+        self._courant = self.adversaire
+
+    def est_terminee(self) -> bool:
+        if self._j1.a_gagne() or self._j2.a_gagne():
             return True
+        coups_j1 = self._plateau.coups_possibles(self._j1.main)
+        coups_j2 = self._plateau.coups_possibles(self._j2.main)
+        return not coups_j1 and not coups_j2
 
-        if self.__MIN.a_gagne():
-            return True
+    def utility(self) -> Optional[int]:
+        """+1 si J1 gagne, -1 si J2 gagne, 0 si égalité, None sinon."""
+        if not self.est_terminee():
+            return None
+        if self._j1.a_gagne():
+            return 1
+        if self._j2.a_gagne():
+            return -1
+        s1, s2 = self._j1.somme_pips(), self._j2.somme_pips()
+        if s1 < s2:
+            return 1
+        if s2 < s1:
+            return -1
+        return 0
 
-        if not self.__plateau.coups_possibles(self.__joueur_courant.get_main()):
-            return True
-
-        return False
-    #player(s)
-    def changer_joueur(self):
-        if self.__joueur_courant == self.__MAX:
-            self.__joueur_courant = self.__MIN
-        else:
-            self.__joueur_courant = self.__MAX
-            
-            
-    def jouer(self, domino, position):
-
-        ok = self.__plateau.poser_domino(domino, position)
-
-        if ok:
-            self.__joueur_courant.retirer_domino(domino)
-            self.changer_joueur()
-
-        return ok
-    
-    #Utility
-    def utility(self):
-
-        # Cas 1 : MAX a gagné
-        if self.__MAX.a_gagne():
-            return self.__MIN.somme_main()  # gain = points adversaire
-
-        # Cas 2 : MIN a gagné
-        if self.__MIN.a_gagne():
-            return -self.__MAX.somme_main()  # gain négatif pour MAX
-
-        # Cas 3 : partie bloquée (aucun coup possible)
-        coups_MAX = self.__plateau.coups_possibles(self.__MAX.get_main())
-        coups_MIN = self.__plateau.coups_possibles(self.__MIN.get_main())
-
-        if not coups_MAX and not coups_MIN:
-            somme_MAX = self.__MAX.somme_main()
-            somme_MIN = self.__MIN.somme_main()
-            if somme_MAX < somme_MIN:
-                return somme_MIN  # MAX gagne
-            elif somme_MIN < somme_MAX:
-                return -somme_MAX  # MIN gagne
-            else:
-                return 0  # égalité
-
-        # Sinon, partie pas terminée
+    def coup_force(self) -> Optional[Coup]:
+        """Sur plateau vide : pose forcée du plus fort double du joueur courant."""
+        if not self._plateau.vide:
+            return None
+        for valeur in range(VALEUR_MAX, -1, -1):
+            d = Domino(valeur, valeur)
+            if d in self._courant.main:
+                return (d, "gauche")
         return None
 
-    def get_joueur1(self) : 
-        return self.__MAX
-
-    def get_joueur2(self) : 
-        return self.__MIN
-
-    def get_plateau(self):
-        return self.__plateau
-
-    def get_joueur_courant(self):
-        return self.__joueur_courant
-
-    def set_joueur1(self ,joueur1 ):
-        self.__MAX = joueur1
-
-    def set_joueur2(self ,joueur2 ):
-        self.__MIN = joueur2
-
-    def set_plateau(self ,plateau ):
-        self.__plateau = plateau
-        
-        
-    @staticmethod
-    def creer_jeu_complet():
-        """Crée la liste complète des 28 dominos."""
-        return [Domino(i, j) for i in range(7) for j in range(i, 7)]
-
-    @staticmethod
-    def repartir_dominos(dominos):
-        """Distribue les dominos équitablement entre 2 joueurs."""
-        joueur1 = dominos[::2]  # tous les dominos d'index pair
-        joueur2 = dominos[1::2] # tous les dominos d'index impair
-        return joueur1, joueur2
-
-    def afficher_partie(self):
-        print(f"Joueur 1 : {self.__MAX.get_nom()} avec la main : {self.__joueur1.get_main()}")
-        print(f"Joueur 2 : {self.__MIN.get_nom()} avec la main : {self.__joueur2.get_main()}")
-        print(f"Plateau : {self.__plateau.get_dominosPoses()} avec extremites gauche : {self.__plateau.get_extremiteGauche()} et droite : {self.__plateau.get_extremiteDroite()}")
-
-
-
-    def jouer_tour(self):
-        coups = self.__plateau.coups_possibles(self.__joueur_courant.get_main())
-        
-        if not coups:
-            print(f"{self.__joueur_courant.get_nom()} ne peut pas jouer, tour passé")
+    def jouer_coup(self, domino: Domino, position: str) -> bool:
+        ok = self._plateau.poser(domino, position)
+        if ok:
+            self._courant.retirer(domino)
+            self._historique.append((self._courant.nom, (domino, position)))
             self.changer_joueur()
-            return  # rien joué ce tour
-        
-        # sinon choisir et jouer un coup (humain ou IA)
-        #choisir_coup retourne un tuple (domino, position) elle est pas deffinie pour le moment 
-        domino, position = self.__joueur_courant.choisir_coup(self)
-        self.jouer(domino, position)
+        return ok
+
+    def jouer_tour(self, verbose: bool = False) -> bool:
+        if self.est_terminee():
+            return False
+        coups = self._plateau.coups_possibles(self._courant.main)
+        if not coups:
+            if verbose:
+                print(f"{self._courant.nom} passe son tour (aucun coup possible).")
+            self._historique.append((self._courant.nom, None))
+            self.changer_joueur()
+            return True
+        forced = self.coup_force()
+        if forced is not None:
+            if verbose:
+                print(f"{self._courant.nom} pose le double forcé {forced[0]}.")
+            self.jouer_coup(*forced)
+            return True
+        choix = self._courant.choisir_coup(self)
+        if choix is None:
+            self._historique.append((self._courant.nom, None))
+            self.changer_joueur()
+            return True
+        if verbose:
+            print(f"{self._courant.nom} pose {choix[0]} à {choix[1]}.")
+        self.jouer_coup(*choix)
+        return True
+
+    def jouer_jusqua_fin(self, verbose: bool = False) -> int:
+        while self.jouer_tour(verbose=verbose):
+            pass
+        return self.utility()
+
+    def cloner(self) -> "Partie":
+        """Clone leger pour les simulations Minimax.
+
+        Tout etat modifiable est copie : nouvelles listes pour la main de chaque
+        joueur, pour le plateau et pour l'historique. Les dominos eux-memes
+        sont immuables et peuvent etre partages sans risque.
+        """
+        clone = object.__new__(Partie)
+        clone._j1 = self._j1._cloner_simulation()
+        clone._j2 = self._j2._cloner_simulation()
+        clone._plateau = self._plateau._cloner_simulation()
+        clone._historique = list(self._historique)  # COPY explicite
+        clone._courant = clone._j1 if self._courant is self._j1 else clone._j2
+        return clone

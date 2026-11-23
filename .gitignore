@@ -1,0 +1,35 @@
+# Environnements virtuels
+venv/
+.venv/
+env/
+
+# Cache Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Cache pytest
+.pytest_cache/
+
+# Couverture de tests
+.coverage
+htmlcov/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+*~
+
+# macOS
+.DS_Store
+
+# Fichiers de configuration locale
+.env
+*.env.local

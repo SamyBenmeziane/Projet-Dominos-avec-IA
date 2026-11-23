@@ -1,86 +1,79 @@
-from copy import deepcopy
-class Plateau :
+"""Plateau linéaire de dominos avec extrémités gauche / droite."""
+from typing import Optional
+
+from .domino import Domino
+
+Coup = tuple[Domino, str]  # (domino, position) où position ∈ {"gauche", "droite"}
+
+
+class Plateau:
     def __init__(self):
-        self.__dominosPoses = []
-        self.__extremiteGauche = None
-        self.__extremiteDroite = None
+        self._dominos: list[Domino] = []
+        self._gauche: Optional[int] = None
+        self._droite: Optional[int] = None
 
-    # action(s)
-    def coups_possibles(self,main_joueur):
-            coups = []
-            if self.plateauVide() : 
-                for domino in main_joueur :
-                    coups.append((domino,"gauche"))
-                    coups.append((domino,"droite"))
-                return coups 
-            else :
-                for domino in main_joueur :
-                    if domino.get_gauche() == self.__extremiteGauche or domino.get_droite() == self.__extremiteGauche :
-                        coups.append((domino,"gauche"))
-                    if domino.get_gauche() == self.__extremiteDroite or domino.get_droite() == self.__extremiteDroite :
-                        coups.append((domino,"droite"))
-                return coups
-    
-    # resultat(s,coup)        
-    def simuler_coup(self, domino, position):
-        copie = deepcopy(self)
-        copie.poser_domino(domino, position)
-        return copie   
+    @property
+    def vide(self) -> bool:
+        return len(self._dominos) == 0
 
-    def poser_domino(self, domino, position):
+    @property
+    def extremite_gauche(self) -> Optional[int]:
+        return self._gauche
 
-        # Plateau vide
-        if self.plateauVide():
-            self.__dominosPoses.append(domino)
-            self.__extremiteGauche = domino.get_gauche()
-            self.__extremiteDroite = domino.get_droite()
+    @property
+    def extremite_droite(self) -> Optional[int]:
+        return self._droite
+
+    @property
+    def dominos_poses(self) -> list[Domino]:
+        return list(self._dominos)
+
+    def coups_possibles(self, main: list[Domino]) -> list[Coup]:
+        if self.vide:
+            return [(d, "gauche") for d in main]
+        coups: list[Coup] = []
+        for d in main:
+            if d.contient(self._gauche):
+                coups.append((d, "gauche"))
+            if d.contient(self._droite):
+                coups.append((d, "droite"))
+        return coups
+
+    def poser(self, domino: Domino, position: str) -> bool:
+        if self.vide:
+            self._dominos.append(domino)
+            self._gauche = domino.a
+            self._droite = domino.b
             return True
-        # ----- CÔTÉ GAUCHE -----
         if position == "gauche":
-            # Si déjà bon
-            if domino.get_droite() == self.__extremiteGauche:
-                pass
-            # Sinon on essaie de retourner
-            elif domino.get_gauche() == self.__extremiteGauche:
-                domino.retourner()
-            # Sinon impossible
-            else:
-                print("Coup illégal à gauche")
+            if not domino.contient(self._gauche):
                 return False
-            # On ajoute
-            #INSERTION EN TÊTE SANS ECRASER LES AUTRES ÉLÉMENTS
-            self.__dominosPoses.insert(0, domino)
-            self.__extremiteGauche = domino.get_gauche()
+            self._dominos.insert(0, domino)
+            self._gauche = domino.autre_cote(self._gauche)
             return True
-        # ----- CÔTÉ DROIT -----
-        elif position == "droite":
-            if domino.get_gauche() == self.__extremiteDroite:
-                pass
-            elif domino.get_droite() == self.__extremiteDroite:
-                domino.retourner()
-            else:
-                print("Coup illégal à droite")
+        if position == "droite":
+            if not domino.contient(self._droite):
                 return False
-            self.__dominosPoses.append(domino)
-            self.__extremiteDroite = domino.get_droite()
+            self._dominos.append(domino)
+            self._droite = domino.autre_cote(self._droite)
             return True
+        return False
 
+    def simuler(self, domino: Domino, position: str) -> "Plateau":
+        copie = self._cloner_simulation()
+        copie.poser(domino, position)
+        return copie
 
-        # ----- POSITION INVALIDE -----
-        else:
-            print("Position invalide")
-            return False
+    def _cloner_simulation(self) -> "Plateau":
+        """Clone leger : nouvelle liste de dominos (refs partagees, Domino immuable)."""
+        clone = object.__new__(Plateau)
+        clone._dominos = list(self._dominos)  # COPY explicite de la liste
+        clone._gauche = self._gauche  # int : valeur primitive
+        clone._droite = self._droite
+        return clone
 
-    def get_dominosPoses (self):
-        return self.__dominosPoses
-
-    def get_extremiteGauche (self):
-        return self.__extremiteGauche
-
-    def get_extremiteDroite (self):
-        return self.__extremiteDroite
-
-    def plateauVide(self):
-        return not self.__dominosPoses
-            
-    
+    def __repr__(self) -> str:
+        if self.vide:
+            return "Plateau(vide)"
+        chaine = " ".join(repr(d) for d in self._dominos)
+        return f"Plateau([{self._gauche}] {chaine} [{self._droite}])"

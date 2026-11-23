@@ -1,40 +1,51 @@
+"""Domino non orienté : paire (a, b) avec a <= b par convention."""
+
+VALEUR_MAX = 10
+
+
 class Domino:
-    def __init__(self,gauche ,droite) :
-        self.__gauche = gauche 
-        self.__droite = droite
-    
-    def get_gauche (self):
-        return self.__gauche
+    __slots__ = ("_a", "_b")
 
-    def get_droite (self) : 
-        return self.__droite
+    def __init__(self, a: int, b: int):
+        if not (0 <= a <= VALEUR_MAX and 0 <= b <= VALEUR_MAX):
+            raise ValueError(f"Valeurs invalides : ({a}, {b})")
+        self._a = min(a, b)
+        self._b = max(a, b)
 
-    #setters
-    def set_gauche(self ,valeur):
-        if  0<= valeur <= 6 :
-            self.__gauche = valeur
-        else :
-            print(f"{valeur} est invalide !!!")
-    
-    def set_droite(self,valeur):
-        if 0<= valeur <= 6:
-            self.__droite = valeur
-        else :
-            print (f"{valeur} est invalide mon amis ")
-            
-    def afficher (self):
-        print(f"[{self.__gauche}|{self.__droite}]")
-    # Méthode pour représenter le domino sous forme de chaîne
-    #REPR pour representation
-    def __repr__(self):
-        return f"[{self.__gauche}|{self.__droite}]"
+    @property
+    def a(self) -> int:
+        return self._a
 
-    
-    def retourner (self):
-        self.__gauche,self.__droite = self.__droite , self.__gauche
-    
-    def est_double (self) : 
-        return self.__droite == self.__gauche
+    @property
+    def b(self) -> int:
+        return self._b
+
+    def est_double(self) -> bool:
+        return self._a == self._b
+
+    def pips(self) -> int:
+        return self._a + self._b
+
+    def contient(self, valeur: int) -> bool:
+        return valeur == self._a or valeur == self._b
+
+    def autre_cote(self, valeur: int) -> int:
+        if valeur == self._a:
+            return self._b
+        if valeur == self._b:
+            return self._a
+        raise ValueError(f"Le domino {self} ne contient pas {valeur}")
+
+    def __eq__(self, other) -> bool:
+        return isinstance(other, Domino) and self._a == other._a and self._b == other._b
+
+    def __hash__(self) -> int:
+        return hash((self._a, self._b))
+
+    def __repr__(self) -> str:
+        return f"[{self._a}|{self._b}]"
 
 
-    
+def jeu_complet() -> list[Domino]:
+    """Génère les 66 dominos du jeu double-10 (de 0|0 à 10|10)."""
+    return [Domino(i, j) for i in range(VALEUR_MAX + 1) for j in range(i, VALEUR_MAX + 1)]

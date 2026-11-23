@@ -1,0 +1,618 @@
+\documentclass[11pt,a4paper]{article}
+
+% =====================================================
+% Packages
+% =====================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{array}
+
+\geometry{margin=2.5cm}
+\hypersetup{colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!60!black}
+
+% --- Style listings (code) ---
+\definecolor{codegray}{rgb}{0.95,0.95,0.95}
+\definecolor{codekw}{rgb}{0.13,0.29,0.53}
+\definecolor{codestr}{rgb}{0.31,0.60,0.02}
+\definecolor{codecom}{rgb}{0.4,0.4,0.4}
+\lstset{
+    backgroundcolor=\color{codegray},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    keywordstyle=\color{codekw}\bfseries,
+    stringstyle=\color{codestr},
+    commentstyle=\color{codecom}\itshape,
+    showstringspaces=false,
+    language=Python,
+    captionpos=b,
+}
+
+% =====================================================
+% Page de titre
+% =====================================================
+\title{
+    \vspace{-1.5cm}
+    \textbf{Intelligence Artificielle}\\
+    \large Projet : Variante déterministe du jeu de Domino 10\textbar{}10\\
+    \vspace{0.3cm}
+    \rule{0.6\textwidth}{0.5pt}
+}
+\author{
+    \textsc{BENMEZIANE Samy} \\
+    \texttt{samy.benmeziane@etu.u-paris.fr}
+    \and
+    \textsc{CHEGGOUR Racha} \\
+    \texttt{racha.cheggour@etu.u-paris.fr}
+}
+\date{Mai 2026 \\ \small Université Paris Cité --- L3 Informatique}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Ce projet propose une variante déterministe et à information parfaite du jeu de Dominos
+double-10 (66 dominos, 33 par joueur, distribution fixe), formalisée comme un problème
+de recherche au sens du cours d'IA. Cinq intelligences artificielles ont été
+implémentées : une IA aléatoire (baseline) et quatre IA à base de Minimax avec
+élagage \(\alpha\)-\(\beta\), différenciées par leur fonction d'évaluation
+(\texttt{f\_pip}, \texttt{f\_blocage}, \texttt{f\_protect}, \texttt{f\_mixte}) et leur
+profondeur de recherche (4 ou 6). Un tournoi structuré de \textbf{600 parties}
+(10 configurations stratifiées \(\times\) 3 variantes \(\times\) 2 attributions
+\(\times\) 10 couples d'IA) a permis de mesurer les performances relatives,
+l'avantage du premier joueur (\(\approx\) 61\%) et l'efficacité de l'élagage
+\(\alpha\)-\(\beta\) (gain de \textbf{18.8\(\times\)} avec move ordering).
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% =====================================================
+% Section 1 — Présentation du jeu (sujet 5.1)
+% =====================================================
+\section{Présentation générale du jeu}
+
+\subsection{Choix du jeu et motivation}
+
+Nous avons choisi une \textbf{variante du jeu de Dominos} dans laquelle nous éliminons
+toute composante stochastique afin de respecter les contraintes du sujet :
+\textit{jeu déterministe à information parfaite}. La variante classique du domino
+implique une pioche cachée (talon) qui introduit du hasard et de l'information
+incomplète~; nous l'avons supprimée.
+
+Pour augmenter la complexité du jeu (facteur de branchement et profondeur de recherche
+significatifs), nous travaillons avec un \textbf{jeu double-10} composé de
+\textbf{66 dominos} (de \texttt{[0\textbar{}0]} à \texttt{[10\textbar{}10]}), distribués
+\textbf{33 par joueur} dès l'initialisation. Cette taille a été choisie après que la
+version classique double-6 (28 dominos) a été jugée trop simple par l'enseignante
+encadrante.
+
+\subsection{Règles retenues}
+
+\begin{itemize}[leftmargin=*]
+    \item Le joueur qui possède le \textbf{plus fort double} (10\textbar{}10 dans
+          la quasi-totalité des cas) commence et \textbf{doit le poser} en premier coup.
+    \item Le plateau est \textbf{linéaire} (extrémités gauche/droite, sans bifurcation
+          aux doubles). Cette simplification limite la complexité tout en préservant
+          la richesse stratégique.
+    \item À chaque tour, un joueur pose un domino dont une des deux valeurs correspond
+          à l'une des deux extrémités du plateau. S'il ne le peut pas, il \textbf{passe
+          son tour} (sans en être pénalisé directement).
+    \item Le jeu s'arrête lorsque (a) un joueur a vidé sa main, ou (b) les deux joueurs
+          sont simultanément bloqués.
+    \item En cas de blocage, le \textbf{joueur ayant le moins de pips} restants gagne.
+\end{itemize}
+
+\subsection{Modélisation comme problème de recherche}
+
+Nous formalisons le jeu en suivant les définitions du cours :
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{État initial $s_0$} : une distribution fixe et reproductible des
+          66 dominos en deux mains (33 chacune), un plateau vide, et un joueur
+          courant déterminé par le possesseur du plus fort double.
+    \item \textbf{Actions(s)} : ensemble des couples (domino, position) légaux pour
+          le joueur courant.
+    \item \textbf{Result(s, a)} : nouvel état après pose du domino, avec mise à jour
+          des extrémités du plateau, retrait du domino de la main, et changement de
+          joueur courant.
+    \item \textbf{TerminalTest(s)} : $s$ terminal si une main est vide ou si les
+          deux joueurs sont bloqués.
+    \item \textbf{Utility(s)} : $+1$ pour MAX en victoire, $-1$ en défaite, $0$ en
+          égalité (jeu à somme nulle).
+\end{itemize}
+
+% =====================================================
+% Section 2 — Moteur de jeu (sujet 5.2)
+% =====================================================
+\section{Implémentation et validation du moteur de jeu}
+
+\subsection{Architecture orientée objet}
+
+L'implémentation est en \textbf{Python 3.10+} (sans dépendance plateforme : compatible
+Linux et Windows). L'architecture suit une décomposition orientée objet stricte :
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Module} & \textbf{Rôle} \\
+\midrule
+\texttt{src/domino.py} & Classe \texttt{Domino} immuable (\texttt{\_\_slots\_\_}), génération du jeu complet \\
+\texttt{src/plateau.py} & Plateau linéaire avec extrémités, génération des coups légaux \\
+\texttt{src/joueur.py} & Joueur abstrait + \texttt{JoueurHumain} (CLI) \\
+\texttt{src/partie.py} & Moteur de jeu : état, transitions, terminaison, utility \\
+\texttt{src/ia/} & Module des IA : aléatoire, Minimax, fonctions d'évaluation \\
+\texttt{src/tournoi/} & Génération de configurations et runner de tournoi \\
+\texttt{tests/} & 35 tests unitaires (pytest) \\
+\bottomrule
+\end{tabular}
+\caption{Organisation des modules du projet.}
+\end{table}
+
+\subsection{Choix d'implémentation clés}
+
+\paragraph{Domino immuable.} La classe \texttt{Domino} utilise \texttt{\_\_slots\_\_}
+et stocke les valeurs $(a, b)$ avec la convention $a \leq b$. Elle est \textbf{strictement
+immuable}, ce qui permet de partager les références sans risque de mutation accidentelle.
+
+\paragraph{Clone léger.} Un point critique de performance pour le Minimax était le
+clonage de la \texttt{Partie} pour explorer les coups. Notre première implémentation
+utilisait \texttt{copy.deepcopy()} qui se révélait extrêmement lent (de l'ordre de
+60$\times$ plus lent que nécessaire). Nous avons réécrit un \textbf{clone léger}
+exploitant l'immuabilité des dominos : seules les listes mutables sont copiées
+explicitement, les références aux dominos étant partagées sans risque.
+
+\paragraph{Premier coup forcé.} La règle exigeant que le possesseur du plus fort
+double le pose en premier est gérée au niveau de la classe \texttt{Partie} via la
+méthode \texttt{coup\_force()}, transparente pour les IA.
+
+\subsection{Validation par tests unitaires}
+
+Le projet contient \textbf{35 tests unitaires} (avec \texttt{pytest}), tous verts en
+moins de 10 secondes. Ils couvrent :
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Domino} (7 tests) : création normalisée, calcul des pips, doubles, contient/autre côté, égalité/hash, validation des bornes, génération du jeu complet (66 dominos).
+    \item \textbf{Plateau} (7 tests) : état initial vide, pose initiale, coups possibles, pose à gauche/droite, refus des coups illégaux, indépendance des simulations.
+    \item \textbf{Partie} (8 tests) : détermination du premier joueur, coup forcé, victoire, blocage, et 3 tests d'\textbf{indépendance du clone léger} (mains, plateau, joueur courant).
+    \item \textbf{IA et fonctions d'évaluation} (13 tests) : chaque niveau d'IA produit un coup légal, parties complètes, comportement des 4 fonctions d'évaluation incluant les 3 cas hiérarchisés de \texttt{f\_blocage}.
+\end{itemize}
+
+\includegraphics[width=0.95\textwidth]{todo1.png}
+
+% =====================================================
+% Section 3 — Évaluations + alpha-beta (sujet 5.3)
+% =====================================================
+\section{Fonctions d'évaluation, score et élagage \(\alpha\)-\(\beta\)}
+
+\subsection{Algorithme Minimax avec élagage \(\alpha\)-\(\beta\)}
+
+Toutes nos IA "intelligentes" reposent sur l'algorithme \textbf{Minimax} avec
+\textbf{élagage \(\alpha\)-\(\beta\)} et \textbf{move ordering} (tri des coups par
+pips décroissants pour favoriser les coupures précoces). L'évaluation aux feuilles
+utilise une des quatre fonctions décrites ci-dessous, et un état terminal renvoie
+$\pm 10\,000$ pour écraser toute heuristique et garantir la priorité absolue à la
+victoire.
+
+\subsection{Description des fonctions d'évaluation}
+
+Nous avons développé \textbf{quatre fonctions d'évaluation distinctes}, chacune
+incarnant une stratégie différente. Toutes sont calculées du point de vue du joueur
+MAX. Soit $g$ et $d$ les valeurs aux extrémités gauche et droite du plateau~;
+$\text{pips}(j)$ la somme des pips des dominos en main du joueur $j$.
+
+\paragraph{(1) \texttt{f\_pip} --- différentiel de pips.}
+\[
+    f_{\text{pip}}(s) = \text{pips}(\text{MIN}) - \text{pips}(\text{MAX})
+\]
+\textit{Intuition :} récompense les positions où l'adversaire garde beaucoup de pips
+et où nous en avons disposé. C'est la stratégie la plus directe : se rapprocher de
+l'épuisement de sa propre main.\\
+\textit{Bornes :} $\left[-\text{pips}_0(\text{MAX}),\, +\text{pips}_0(\text{MIN})\right]$
+où $\text{pips}_0$ représente la somme initiale.
+
+\paragraph{(2) \texttt{f\_blocage} --- pénaliser l'adversaire bloqué (3 cas hiérarchisés).}
+Cette fonction implémente une \textbf{hiérarchie explicite de cas} :
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Cas 1 (blocage total)} : aucun domino adverse ne contient ni $g$ ni $d$.
+          \[ f_{\text{blocage}} = \text{pips}(\text{MIN}) \]
+    \item \textbf{Cas 2 (blocage partiel)} : une seule extrémité ne contient aucune valeur en main adverse.
+          \[ f_{\text{blocage}} = \text{pips}(\text{MIN}) - 1 \]
+    \item \textbf{Cas 3 (aucune extrémité bloquée)} :
+          \[ f_{\text{blocage}} = \sum_{d \in \text{main}_{\text{MIN}},\ d \not\ni g \wedge d \not\ni d}\!\!\!\!\!\! \text{pips}(d) \]
+\end{itemize}
+\textit{Intuition :} privilégier strictement le blocage total sur le partiel
+(différence garantie de 1 point), tout en récompensant graduellement les blocages
+individuels de dominos.\\
+\textit{Bornes :} $\left[0, \text{pips}_0(\text{MIN})\right]$.
+
+\paragraph{(3) \texttt{f\_protect} --- éviter d'être soi-même bloqué (miroir négatif).}
+Strict miroir de \texttt{f\_blocage} appliqué à notre propre main, avec signe négatif :
+\begin{itemize}[leftmargin=*]
+    \item Cas 1 (totalement bloqué) : $f_{\text{protect}} = -\text{pips}(\text{MAX})$
+    \item Cas 2 (partiellement) : $f_{\text{protect}} = -(\text{pips}(\text{MAX}) - 1)$
+    \item Cas 3 (libre) : $f_{\text{protect}} = -\!\!\sum \text{pips}$ des dominos isolés en main MAX
+\end{itemize}
+\textit{Bornes :} $\left[-\text{pips}_0(\text{MAX}), 0\right]$.
+
+\paragraph{(4) \texttt{f\_mixte} --- somme des trois.}
+\[
+    f_{\text{mixte}} = f_{\text{pip}} + f_{\text{blocage}} + f_{\text{protect}}
+\]
+Combine course aux pips, attaque (blocage de l'adversaire) et défense (anti-blocage de soi).
+
+\subsection{Analyse expérimentale de l'élagage \(\alpha\)-\(\beta\)}
+
+Nous avons mesuré l'impact concret de l'élagage \(\alpha\)-\(\beta\) sur une partie
+complète à profondeur 4 avec \texttt{f\_pip}.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Configuration} & \textbf{Temps} & \textbf{Nœuds explorés} & \textbf{Élagages} \\
+\midrule
+Minimax brut (sans optim.) & 3.39 s & 171\,732 & 0 \\
+Minimax + \(\alpha\)-\(\beta\) & 0.67 s & 31\,064 & 5\,394 \\
+Minimax + \(\alpha\)-\(\beta\) + move ordering & \textbf{0.18 s} & \textbf{9\,634} & 2\,781 \\
+\bottomrule
+\end{tabular}
+\caption{Impact mesuré de l'élagage \(\alpha\)-\(\beta\) et du move ordering
+(profondeur 4, \texttt{f\_pip}, partie complète).}
+\label{tab:alphabeta}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{impact_alpha_beta.png}
+\caption{Impact de \(\alpha\)-\(\beta\) et move ordering sur le temps, le nombre de
+nœuds explorés et le nombre d'élagages déclenchés.}
+\label{fig:alphabeta}
+\end{figure}
+
+\textbf{Lectures principales :}
+\begin{itemize}[leftmargin=*]
+    \item L'élagage \(\alpha\)-\(\beta\) seul divise par \textbf{5} le temps et par
+          \textbf{5.5} le nombre de nœuds explorés, conformément à la théorie.
+    \item Le \textbf{move ordering} apporte un facteur \(3.7\)$\times$ supplémentaire,
+          aboutissant à un gain total de \textbf{18.8$\times$}.
+    \item Paradoxalement, le nombre d'élagages \emph{diminue} avec move ordering :
+          en explorant les coups les plus prometteurs en premier, on déclenche les
+          coupures plus tôt, ce qui réduit l'arbre exploré et donc le nombre
+          d'opportunités de coupures.
+    \item Le résultat de la partie est strictement \textbf{identique} dans les trois
+          configurations : \(\alpha\)-\(\beta\) ne modifie pas la qualité du jeu,
+          uniquement la vitesse de calcul.
+\end{itemize}
+
+  \begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{noeuds_vs_profondeur.png}
+  \caption{Croissance du nombre de nœuds explorés et du temps de calcul en
+  fonction de la profondeur Minimax (échelle logarithmique). Trois configurations
+  sont comparées~: Minimax seul (rouge), avec \(\alpha\)-\(\beta\) (orange), et avec
+  \(\alpha\)-\(\beta\) + move ordering (vert). Les optimisations s'\textbf{empilent
+  de manière multiplicative}~: à profondeur 6, le gain total atteint
+  \textbf{200\(\times\)}.}
+  \label{fig:profondeur}
+  \end{figure}
+
+  \begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{rrrrrrr}
+  \toprule
+  \textbf{Prof.} & \multicolumn{2}{c}{\textbf{Sans \(\alpha\)-\(\beta\)}} &
+  \multicolumn{2}{c}{\textbf{Avec \(\alpha\)-\(\beta\) seul}} &
+  \multicolumn{2}{c}{\textbf{Avec \(\alpha\)-\(\beta\) + ordering}} \\
+  \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+         & Nœuds       & Temps   & Nœuds    & Temps   & Nœuds  & Temps   \\
+  \midrule
+  2  &       98 & 0.002 s &      66 & 0.001 s &      28 & 0.001 s \\
+  3  &      950 & 0.021 s &     353 & 0.008 s &     134 & 0.003 s \\
+  4  &    9\,626 & 0.208 s &  1\,193 & 0.026 s &     544 & 0.012 s \\
+  5  &   93\,996 & 2.079 s &  6\,972 & 0.148 s &  1\,959 & 0.044 s \\
+  6  &  904\,830 & 19.6 s  & 34\,099 & 0.72 s  &  4\,519 & 0.10 s  \\
+  \bottomrule
+  \end{tabular}
+  \caption{Mesures détaillées de l'impact de \(\alpha\)-\(\beta\) et du move
+  ordering en fonction de la profondeur (1 coup d'IA après le 10\textbar{}10 forcé,
+  config \texttt{ouverte\_01}/\texttt{v0}, eval \texttt{f\_pip}).}
+  \label{tab:profondeur}
+  \end{table}
+
+% =====================================================
+% Section 4 — Tournoi (sujet 5.4)
+% =====================================================
+\section{Tournoi entre les intelligences artificielles}
+
+\subsection{Méthodologie : configurations stratifiées}
+
+Le caractère strictement déterministe du jeu nous a posé un défi méthodologique :
+deux IA déterministes affrontant la même configuration produisent toujours la même
+partie. Pour respecter l'exigence de "$\geq 50$ parties par couple" tout en
+disposant de données statistiquement variées, nous avons mis en place une
+\textbf{méthodologie de tournoi stratifié} :
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{5 types de configurations} initiales définies par des critères
+          quantitatifs sur la diversité de valeurs et le différentiel de pips :
+          \texttt{ouverte}, \texttt{fermée}, \texttt{équilibrée},
+          \texttt{avantage\_alpha}, \texttt{avantage\_beta}.
+    \item \textbf{2 configurations par type}, soit 10 configurations totales,
+          générées de manière reproductible par un seed fixe (42).
+    \item \textbf{3 variantes par configuration} (notées \texttt{v0}, \texttt{v1},
+          \texttt{v2}) : la \texttt{v0} est l'originale, et \texttt{v1}/\texttt{v2}
+          en dérivent par échange aléatoire de 2 dominos en préservant le type
+          de configuration.
+    \item \textbf{2 attributions des mains} par variante : la même configuration est
+          jouée une fois avec l'IA-A possédant \texttt{Main\_alpha} (contenant le
+          10\textbar{}10 et donc starter), et une fois avec l'IA-B la possédant.
+\end{itemize}
+
+\textbf{Total :} $10 \times 3 \times 2 = 60$ parties par couple d'IA, soit \textbf{600 parties}
+en additionnant les 10 couples uniques formés à partir des 5 IA.
+
+\subsection{Cinq IA, quatre fonctions d'évaluation}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcccl}
+\toprule
+\textbf{IA} & \textbf{Profondeur} & \textbf{$\alpha$-$\beta$} & \textbf{Move ordering} & \textbf{Évaluation} \\
+\midrule
+\texttt{IA1\_aleatoire} & --- & --- & --- & hasard \\
+\texttt{IA2\_pip} & 6 & \checkmark & \checkmark & \texttt{f\_pip} \\
+\texttt{IA3\_blocage} & 6 & \checkmark & \checkmark & \texttt{f\_blocage} \\
+\texttt{IA4\_protect} & 6 & \checkmark & \checkmark & \texttt{f\_protect} \\
+\texttt{IA5\_mixte} & 4 & \checkmark & \checkmark & \texttt{f\_mixte} \\
+\bottomrule
+\end{tabular}
+\caption{Configuration des 5 IA en lice. La profondeur réduite de \texttt{IA5\_mixte}
+(4 contre 6 pour les autres) permet de tester si une stratégie multi-critères mais peu
+profonde peut compenser un manque de prévision face à des stratégies mono-critères
+mais plus profondes.}
+\end{table}
+
+\subsection{Résultats globaux}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{classement_global.png}
+\caption{Classement global des 5 IA par taux de victoire (toutes oppositions confondues),
+avec intervalles de confiance à 95\%. L'aléatoire (IA1) est nettement isolée à 13.3\%~;
+les quatre IA Minimax sont regroupées entre 55\% et 60\% avec des intervalles de
+confiance qui se chevauchent largement.}
+\label{fig:classement}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{IA} & \textbf{Victoires / 240} & \textbf{Taux} \\
+\midrule
+\texttt{IA2\_pip}       & 145 & \textbf{60.4\%} \\
+\texttt{IA3\_blocage}   & 143 & 59.6\% \\
+\texttt{IA4\_protect}   & 139 & 57.9\% \\
+\texttt{IA5\_mixte}     & 133 & 55.4\% \\
+\texttt{IA1\_aleatoire} &  32 & 13.3\% \\
+\bottomrule
+\end{tabular}
+\caption{Classement global après 600 parties au total (240 par IA).}
+\end{table}
+
+\subsection{Matrice détaillée des affrontements}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{significativite_statistique.png}
+\caption{Matrice de domination 5\(\times\)5 (taux de victoire de A contre B). Les
+\textbf{cases hachurées} indiquent les couples dont l'écart de victoire n'est
+\emph{pas} statistiquement significatif au seuil de 95\% (intervalle de confiance
+$\pm 13\%$ à $n=60$).}
+\label{fig:heatmap_signif}
+\end{figure}
+
+\textbf{Observations :}
+\begin{itemize}[leftmargin=*]
+    \item Les couples impliquant \texttt{IA1\_aleatoire} sont tous \emph{très
+          significatifs} : toutes les IA Minimax la battent à 85--88\%, confirmant
+          l'apport décisif de la planification.
+    \item En revanche, parmi les 6 couples Minimax-vs-Minimax, \textbf{seuls 1 ou 2
+          sont statistiquement significatifs} :
+          \begin{itemize}
+              \item \texttt{IA3\_blocage} > \texttt{IA4\_protect} (58.3\% / 40.0\%) : significatif.
+              \item \texttt{IA2\_pip} > \texttt{IA5\_mixte} (56.7\% / 41.7\%) : significatif.
+              \item Les autres écarts (\texttt{IA2\_pip} vs \texttt{IA3\_blocage}, etc.) tombent dans le bruit statistique.
+          \end{itemize}
+\end{itemize}
+
+\subsection{Triangle non-transitif (rock-paper-scissors)}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.65\textwidth]{triangle_non_transitif.png}
+\caption{Relations de domination entre les 3 stratégies pures. Une seule des trois
+flèches du triangle est statistiquement significative (\texttt{blocage} > \texttt{protect}).}
+\label{fig:triangle}
+\end{figure}
+
+Les données suggèrent un triangle "rock-paper-scissors" :
+\(\texttt{pip} \succ \texttt{blocage} \succ \texttt{protect} \succ \texttt{pip}\).
+\textbf{Néanmoins, deux des trois relations ne sont pas statistiquement significatives}
+(écarts de seulement 1.7~point à 60 parties). Le triangle est donc \emph{partiellement
+illusoire} et son interprétation doit être nuancée. Pour le confirmer, un tournoi
+plus volumineux ($n \geq 200$ parties par couple, IC $\pm 7\%$) serait nécessaire.
+
+\subsection{Avantage du premier joueur}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{avantage_premier_joueur.png}
+\caption{Taux de victoire du joueur qui commence (le \emph{starter}), couple par
+couple. Tous les couples sont au-dessus de la barre des 50\% (rouge), avec une
+moyenne globale de 61.2\% (verte).}
+\label{fig:starter}
+\end{figure}
+
+\textbf{Avantage starter mesuré : 61.2\% en moyenne}, avec une plage entre 53.3\% et
+66.7\% selon les couples. Cet avantage est mécaniquement explicable : le starter pose
+le 10\textbar{}10 dès son premier coup, soit une réduction immédiate de 20 pips
+(c.~à~d. environ 6\% de la masse totale de pips initiale) que l'adversaire ne peut
+pas obtenir d'un coup unique.
+
+\subsection{Performance par type de configuration}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{performance_par_type_config.png}
+\caption{Taux de victoire par IA en fonction du type de configuration initiale.}
+\label{fig:par_type}
+\end{figure}
+
+\textbf{Résultat marquant} : sur les configurations de type \texttt{fermee} (où une
+main est volontairement concentrée sur peu de valeurs, créant un risque de blocage),
+\textbf{toutes les IA atteignent un taux de victoire de 50\%} -- y compris l'IA
+aléatoire. Cela s'explique par la \emph{symétrie parfaite} de notre design~: pour
+chaque variante, nous jouons la même partie deux fois en inversant l'attribution des
+mains, ce qui annule statistiquement l'effet de la stratégie sur ce type de
+configuration. Cela suggère que dans les positions très fermées, le jeu est
+\textbf{déterminé par la distribution initiale}, et la stratégie n'a plus d'influence.
+
+\subsection{Coût temporel}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{duree_moyenne.png}
+\caption{Temps moyen par partie pour chaque couple d'IA (échelle logarithmique).}
+\label{fig:duree}
+\end{figure}
+
+Le temps total du tournoi a été de \textbf{27 min 35 s} (1655 s) pour 600 parties.
+Sans \(\alpha\)-\(\beta\), une extrapolation indique qu'il aurait fallu environ
+\textbf{8 heures}.
+
+% =====================================================
+% Section 5 — IA générative (sujet 5.5)
+% =====================================================
+ \section{Utilisation de l'IA générative}
+
+Conformément à la consigne, nous précisons ici notre usage ponctuel d'outils d'IA
+générative durant ce projet. La conception, les choix algorithmiques, la
+méthodologie expérimentale et l'analyse des résultats sont entièrement notre
+travail ; l'IA a uniquement été sollicitée comme assistance technique.
+
+\begin{description}[leftmargin=*]
+    \item[Modèle utilisé.] Assistance ponctuelle via une IA générative
+    conversationnelle.
+
+    \item[Type d'utilisation.] Aide ponctuelle pour la clarification de certains
+    points de syntaxe Python ou LaTeX, la reformulation de certaines phrases du
+    rapport, la vérification de petits points techniques et le débogage occasionnel
+    de messages d'erreur.
+
+    \item[Environnement.] Navigateur Web, en parallèle de l'éditeur principal
+    VS Code sous Windows.
+
+    \item[Rôle effectif.] L'IA a joué un rôle d'assistance ciblée. Nous lui avons
+    posé des questions précises, puis nous avons vérifié et adapté les réponses
+    avant toute intégration. La conception des fonctions d'évaluation, la
+    méthodologie du tournoi, l'implémentation du clone léger pour Minimax et
+    l'analyse statistique des résultats restent notre travail.
+
+    \item[Apport et limites.] L'IA a permis de gagner du temps sur quelques
+    ambiguïtés syntaxiques et rédactionnelles. Cependant, certaines réponses
+    étaient incomplètes ou incohérentes avec notre architecture, ce qui a nécessité
+    un regard critique systématique.
+\end{description}
+% =====================================================
+% Section 6 — Difficultés rencontrées (sujet 5.6)
+% =====================================================
+\section{Difficultés rencontrées}\label{sec:difficultes}
+
+\paragraph{(1) Performance du Minimax.} La première implémentation utilisait
+\texttt{copy.deepcopy()} pour cloner l'état lors de l'exploration de l'arbre de
+recherche. Mesurée à \textbf{60$\times$ trop lente}, cette approche rendait un
+tournoi à profondeur 6 totalement inenvisageable (estimation de plus de 8 heures).
+Nous avons réécrit un \emph{clone léger} exploitant l'immuabilité des dominos~:
+seules les listes mutables (mains, plateau) sont copiées explicitement. Ce
+changement a réduit le temps du tournoi à \textbf{27 minutes}.
+
+\paragraph{(2) Non-déterminisme du tournoi.} Notre jeu étant déterministe, jouer
+50 fois la même configuration produisait 50 fois le même résultat. Nous avons
+résolu ce paradoxe en adoptant une \emph{méthodologie de stratification}
+(5 types $\times$ 2 configurations $\times$ 3 variantes $\times$ 2 attributions) qui
+garantit la diversité des situations testées sans introduire d'aléatoire.
+
+\paragraph{(3) Calibration des fonctions d'évaluation.} Plusieurs versions
+intermédiaires de \texttt{f\_blocage} ont été testées avant d'arriver à la version
+finale à 3 cas hiérarchisés. Une version trop agressive sur le blocage
+(\(+200\) pour blocage total, \(+50\) pour quasi-blocage) a même \emph{dégradé}
+les performances par rapport à une version simple : trop de bonus rares et
+non-linéaires faisait que l'IA prenait des décisions pip-suboptimales dans la
+majorité des positions où aucun blocage n'était imminent. La version finale
+(récompense proportionnelle à la masse de pips bloquée chez l'adversaire) est plus
+contextuelle et performe mieux.
+
+\paragraph{(4) Bug d'interface graphique.} Lors du refactoring de la GUI Tkinter
+pour ajouter une scrollbar à la main du joueur, un \texttt{return} mal placé a
+laissé tout le code des boutons et de l'historique \emph{après} le retour de la
+fonction utilitaire \texttt{\_construire\_main\_scrollable}, donc \emph{jamais
+exécuté}. Le bug s'est manifesté par des fenêtres sans aucun bouton et un plateau
+qui restait vide. Détecté visuellement par l'utilisateur lors d'un test, il a été
+corrigé en déplaçant le code de construction des contrôles dans la méthode
+appropriée.
+
+\paragraph{(5) Significativité statistique.} Avec 60 parties par couple,
+l'intervalle de confiance à 95\% pour un taux de victoire est d'environ
+$\pm 13\%$. La majorité des écarts entre IA Minimax tombent dans cette plage,
+ce qui nous a contraints à présenter les résultats avec nuance plutôt que de
+proclamer des vainqueurs nets. C'est un rappel utile que toute conclusion
+doit être assortie d'une mesure de confiance.
+
+% =====================================================
+% Conclusion (optionnelle, courte)
+% =====================================================
+\section*{Conclusion}
+
+
+
+Ce projet nous a permis d’implémenter et de comparer rigoureusement plusieurs stratégies
+d’IA pour une variante déterministe du jeu de Dominos. Au-delà des résultats numériques (l’IA
+\texttt{pip} légèrement en tête à 60.4%, l’avantage du starter mesuré à 61.2%, l’élagage
+\(\alpha\)-\(\beta\) accélérant le calcul d’un facteur 18.8$\times$), l’apport principal est
+méthodologique : \textbf{stratification du tournoi}, \textbf{tests d’indépendance du clone
+Minimax}, et \textbf{analyse des intervalles de confiance}.
+
+Un point notable est la performance légèrement supérieure de l’IA \texttt{pip}, qui s’est révélée
+surprenante, dans la mesure où nous nous attendions initialement à ce que l’IA \texttt{Mix} soit
+la plus performante. Une explication possible réside dans la différence de profondeur de recherche :
+l’IA \texttt{Mix} est limitée à une profondeur de 4, tandis que les autres stratégies sont évaluées
+avec une profondeur de 6. Malgré cela, ses performances restent proches, ce qui suggère que la
+combinaison d’heuristiques peut partiellement compenser une profondeur plus faible.
+
+Cependant, plusieurs résultats restent à confirmer sur un tournoi plus volumineux (notamment
+l’existence ou non d’un triangle non-transitif). Le nombre de parties réalisées demeure relativement
+limité, ce qui peut introduire une variabilité statistique. Une extension naturelle de ce travail
+consisterait à augmenter significativement le nombre de simulations (par exemple, plusieurs centaines
+de parties par confrontation), afin d’obtenir des conclusions plus robustes et généralisables.
+
+
+\end{document}
+

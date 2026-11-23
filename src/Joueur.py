@@ -1,29 +1,71 @@
-class Joueur : 
-    def __init__(self,nom , main) :
-        self.__nom = nom
-        self.__main = main  # liste de dominos dans la main du joueur
+"""Joueur abstrait + joueur humain."""
+from abc import ABC, abstractmethod
+from typing import Optional
 
-    def get_nom (self):
-        return self.__nom
+from .domino import Domino
+from .plateau import Coup
 
-    def get_main (self):
-        return self.__main
 
-    def retirer_domino (self,domino):
-        self.__main.remove(domino)
+class Joueur(ABC):
+    def __init__(self, nom: str, main: list[Domino]):
+        self._nom = nom
+        self._main: list[Domino] = list(main)
 
-    def afficher_main (self):
-        for domino in self.__main :
-            domino.afficher()
-    
-    def a_gagne(self):
-        return len(self.__main) == 0
+    @property
+    def nom(self) -> str:
+        return self._nom
 
-    def somme_main(self):
-        total = 0
-        for domino in self.__main:
-            total += domino.get_gauche() + domino.get_droite()
-        return total
-    
-    def __repr__(self):
-        return f"{self.__nom} ({self.somme_main()} pts, {len(self.__main)} dominos)"
+    @property
+    def main(self) -> list[Domino]:
+        return list(self._main)
+
+    def a_gagne(self) -> bool:
+        return len(self._main) == 0
+
+    def somme_pips(self) -> int:
+        return sum(d.pips() for d in self._main)
+
+    def retirer(self, domino: Domino) -> None:
+        self._main.remove(domino)
+
+    @abstractmethod
+    def choisir_coup(self, partie) -> Optional[Coup]:
+        ...
+
+    def _cloner_simulation(self) -> "Joueur":
+        """Clone leger destine aux simulations Minimax.
+
+        Cree une nouvelle instance avec :
+          - _main : NOUVELLE liste (copie superficielle, Domino etant immuable)
+          - autres attributs : partages superficiellement (RNG, eval_fn, ...)
+            car le clone ne servira jamais a choisir un coup.
+        """
+        clone = object.__new__(type(self))
+        clone.__dict__.update(self.__dict__)
+        clone._main = list(self._main)  # COPY explicite de la liste
+        return clone
+
+    def __repr__(self) -> str:
+        return f"{self._nom}({len(self._main)} dominos, {self.somme_pips()} pips)"
+
+
+class JoueurHumain(Joueur):
+    def choisir_coup(self, partie) -> Optional[Coup]:
+        coups = partie.plateau.coups_possibles(self._main)
+        if not coups:
+            return None
+        print(f"\n--- Tour de {self._nom} ---")
+        print(f"Plateau : {partie.plateau}")
+        print(f"Votre main ({len(self._main)} dominos) : {self._main}")
+        print("Coups possibles :")
+        for i, (d, pos) in enumerate(coups):
+            print(f"  [{i}] {d} -> {pos}")
+        while True:
+            entree = input("Votre choix (numéro) : ").strip()
+            try:
+                choix = int(entree)
+                if 0 <= choix < len(coups):
+                    return coups[choix]
+            except ValueError:
+                pass
+            print("Choix invalide, réessayez.")

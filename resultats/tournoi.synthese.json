@@ -1,0 +1,422 @@
+{
+  "IA1_aleatoire__vs__IA2_pip": {
+    "n_parties": 60,
+    "victoires_A": 7,
+    "victoires_B": 53,
+    "nuls": 0,
+    "taux_A": 0.11666666666666667,
+    "taux_B": 0.8833333333333333,
+    "avantage_starter": 0.5833333333333334,
+    "duree_moyenne_s": 0.8108926933331532,
+    "par_type": {
+      "ouverte": {
+        "n": 12,
+        "A": 0,
+        "B": 12,
+        "nul": 0
+      },
+      "fermee": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "equilibree": {
+        "n": 12,
+        "A": 0,
+        "B": 12,
+        "nul": 0
+      },
+      "avantage_alpha": {
+        "n": 12,
+        "A": 1,
+        "B": 11,
+        "nul": 0
+      },
+      "avantage_beta": {
+        "n": 12,
+        "A": 0,
+        "B": 12,
+        "nul": 0
+      }
+    }
+  },
+  "IA1_aleatoire__vs__IA3_blocage": {
+    "n_parties": 60,
+    "victoires_A": 8,
+    "victoires_B": 52,
+    "nuls": 0,
+    "taux_A": 0.13333333333333333,
+    "taux_B": 0.8666666666666667,
+    "avantage_starter": 0.6,
+    "duree_moyenne_s": 3.1066941216685033,
+    "par_type": {
+      "ouverte": {
+        "n": 12,
+        "A": 0,
+        "B": 12,
+        "nul": 0
+      },
+      "fermee": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "equilibree": {
+        "n": 12,
+        "A": 0,
+        "B": 12,
+        "nul": 0
+      },
+      "avantage_alpha": {
+        "n": 12,
+        "A": 1,
+        "B": 11,
+        "nul": 0
+      },
+      "avantage_beta": {
+        "n": 12,
+        "A": 1,
+        "B": 11,
+        "nul": 0
+      }
+    }
+  },
+  "IA1_aleatoire__vs__IA4_protect": {
+    "n_parties": 60,
+    "victoires_A": 8,
+    "victoires_B": 52,
+    "nuls": 0,
+    "taux_A": 0.13333333333333333,
+    "taux_B": 0.8666666666666667,
+    "avantage_starter": 0.6333333333333333,
+    "duree_moyenne_s": 3.1038991483335847,
+    "par_type": {
+      "ouverte": {
+        "n": 12,
+        "A": 0,
+        "B": 12,
+        "nul": 0
+      },
+      "fermee": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "equilibree": {
+        "n": 12,
+        "A": 1,
+        "B": 11,
+        "nul": 0
+      },
+      "avantage_alpha": {
+        "n": 12,
+        "A": 1,
+        "B": 11,
+        "nul": 0
+      },
+      "avantage_beta": {
+        "n": 12,
+        "A": 0,
+        "B": 12,
+        "nul": 0
+      }
+    }
+  },
+  "IA1_aleatoire__vs__IA5_mixte": {
+    "n_parties": 60,
+    "victoires_A": 9,
+    "victoires_B": 51,
+    "nuls": 0,
+    "taux_A": 0.15,
+    "taux_B": 0.85,
+    "avantage_starter": 0.6166666666666667,
+    "duree_moyenne_s": 0.4301180999997693,
+    "par_type": {
+      "ouverte": {
+        "n": 12,
+        "A": 0,
+        "B": 12,
+        "nul": 0
+      },
+      "fermee": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "equilibree": {
+        "n": 12,
+        "A": 0,
+        "B": 12,
+        "nul": 0
+      },
+      "avantage_alpha": {
+        "n": 12,
+        "A": 0,
+        "B": 12,
+        "nul": 0
+      },
+      "avantage_beta": {
+        "n": 12,
+        "A": 3,
+        "B": 9,
+        "nul": 0
+      }
+    }
+  },
+  "IA2_pip__vs__IA3_blocage": {
+    "n_parties": 60,
+    "victoires_A": 31,
+    "victoires_B": 28,
+    "nuls": 1,
+    "taux_A": 0.5166666666666667,
+    "taux_B": 0.4666666666666667,
+    "avantage_starter": 0.6333333333333333,
+    "duree_moyenne_s": 3.422048440000799,
+    "par_type": {
+      "ouverte": {
+        "n": 12,
+        "A": 5,
+        "B": 7,
+        "nul": 0
+      },
+      "fermee": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "equilibree": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "avantage_alpha": {
+        "n": 12,
+        "A": 5,
+        "B": 6,
+        "nul": 1
+      },
+      "avantage_beta": {
+        "n": 12,
+        "A": 9,
+        "B": 3,
+        "nul": 0
+      }
+    }
+  },
+  "IA2_pip__vs__IA4_protect": {
+    "n_parties": 60,
+    "victoires_A": 27,
+    "victoires_B": 31,
+    "nuls": 2,
+    "taux_A": 0.45,
+    "taux_B": 0.5166666666666667,
+    "avantage_starter": 0.5333333333333333,
+    "duree_moyenne_s": 3.3365025783345725,
+    "par_type": {
+      "ouverte": {
+        "n": 12,
+        "A": 7,
+        "B": 5,
+        "nul": 0
+      },
+      "fermee": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "equilibree": {
+        "n": 12,
+        "A": 3,
+        "B": 7,
+        "nul": 2
+      },
+      "avantage_alpha": {
+        "n": 12,
+        "A": 5,
+        "B": 7,
+        "nul": 0
+      },
+      "avantage_beta": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      }
+    }
+  },
+  "IA2_pip__vs__IA5_mixte": {
+    "n_parties": 60,
+    "victoires_A": 34,
+    "victoires_B": 25,
+    "nuls": 1,
+    "taux_A": 0.5666666666666667,
+    "taux_B": 0.4166666666666667,
+    "avantage_starter": 0.6,
+    "duree_moyenne_s": 1.0939906300001894,
+    "par_type": {
+      "ouverte": {
+        "n": 12,
+        "A": 5,
+        "B": 6,
+        "nul": 1
+      },
+      "fermee": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "equilibree": {
+        "n": 12,
+        "A": 9,
+        "B": 3,
+        "nul": 0
+      },
+      "avantage_alpha": {
+        "n": 12,
+        "A": 5,
+        "B": 7,
+        "nul": 0
+      },
+      "avantage_beta": {
+        "n": 12,
+        "A": 9,
+        "B": 3,
+        "nul": 0
+      }
+    }
+  },
+  "IA3_blocage__vs__IA4_protect": {
+    "n_parties": 60,
+    "victoires_A": 35,
+    "victoires_B": 24,
+    "nuls": 1,
+    "taux_A": 0.5833333333333334,
+    "taux_B": 0.4,
+    "avantage_starter": 0.6666666666666666,
+    "duree_moyenne_s": 5.8187599616649095,
+    "par_type": {
+      "ouverte": {
+        "n": 12,
+        "A": 8,
+        "B": 3,
+        "nul": 1
+      },
+      "fermee": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "equilibree": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "avantage_alpha": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "avantage_beta": {
+        "n": 12,
+        "A": 9,
+        "B": 3,
+        "nul": 0
+      }
+    }
+  },
+  "IA3_blocage__vs__IA5_mixte": {
+    "n_parties": 60,
+    "victoires_A": 28,
+    "victoires_B": 31,
+    "nuls": 1,
+    "taux_A": 0.4666666666666667,
+    "taux_B": 0.5166666666666667,
+    "avantage_starter": 0.6166666666666667,
+    "duree_moyenne_s": 3.2367580550014585,
+    "par_type": {
+      "ouverte": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "fermee": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "equilibree": {
+        "n": 12,
+        "A": 7,
+        "B": 5,
+        "nul": 0
+      },
+      "avantage_alpha": {
+        "n": 12,
+        "A": 5,
+        "B": 7,
+        "nul": 0
+      },
+      "avantage_beta": {
+        "n": 12,
+        "A": 4,
+        "B": 7,
+        "nul": 1
+      }
+    }
+  },
+  "IA4_protect__vs__IA5_mixte": {
+    "n_parties": 60,
+    "victoires_A": 32,
+    "victoires_B": 26,
+    "nuls": 2,
+    "taux_A": 0.5333333333333333,
+    "taux_B": 0.43333333333333335,
+    "avantage_starter": 0.6333333333333333,
+    "duree_moyenne_s": 3.2234850283358054,
+    "par_type": {
+      "ouverte": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "fermee": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "equilibree": {
+        "n": 12,
+        "A": 6,
+        "B": 6,
+        "nul": 0
+      },
+      "avantage_alpha": {
+        "n": 12,
+        "A": 6,
+        "B": 4,
+        "nul": 2
+      },
+      "avantage_beta": {
+        "n": 12,
+        "A": 8,
+        "B": 4,
+        "nul": 0
+      }
+    }
+  }
+}
